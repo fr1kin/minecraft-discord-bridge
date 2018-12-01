@@ -168,6 +168,7 @@ class ChatType(Enum):
 def main():
     global BOT_USERNAME
     config = Configuration("config.json")
+    credentials = (config.mc_username, config.mc_password)
     setup_logging(config.logging_level)
 
     database_session.initialize(config)
@@ -198,6 +199,19 @@ def main():
 
     def minecraft_handle_exception(exception, exc_info):
         log.error("A minecraft exception occured! {}:".format(exception), exc_info=exc_info)
+        if isinstance(exception, YggdrasilError):
+            if (exception.yggdrasil_error == "ForbiddenOperationException" and
+                    exception.yggdrasil_error == "Invalid token"):
+                new_auth_token = authentication.AuthenticationToken()
+                try:
+                    new_auth_token.authenticate(*credentials)
+                    connection.auth_token = new_auth_token
+                except YggdrasilError as ye:
+                    log.error(ye)
+                log.info('Reconnecting.')
+                connection.connect()
+                return
+
         handle_disconnect()
 
     def is_server_online():
@@ -227,7 +241,7 @@ def main():
     else:
         auth_token = authentication.AuthenticationToken()
         try:
-            auth_token.authenticate(config.mc_username, config.mc_password)
+            auth_token.authenticate(*credentials)
         except YggdrasilError as e:
             log.info(e)
             sys.exit()
