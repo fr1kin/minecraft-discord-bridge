@@ -202,11 +202,13 @@ def main():
         if isinstance(exception, YggdrasilError):
             if (exception.yggdrasil_error == "ForbiddenOperationException" and
                     exception.yggdrasil_error == "Invalid token"):
+                log.info("Authentication token expired. Re-authenticating with Mojang.")
                 new_auth_token = authentication.AuthenticationToken()
                 try:
                     new_auth_token.authenticate(*credentials)
                     connection.auth_token = new_auth_token
                 except YggdrasilError as ye:
+                    log.error("Error while re-authenticating with Mojang.")
                     log.error(ye)
                 log.info('Reconnecting.')
                 connection.connect()
